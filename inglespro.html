@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Interactiva: Fundamentos de Inglés (Unidad 1)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Calm Learning Palette -->
+    <!-- Application Structure Plan: Se ha diseñado una aplicación de una sola página (SPA) con una barra de navegación superior fija que permite un desplazamiento suave a las distintas secciones temáticas: "Conceptos Clave", "Identifica Palabras", "Estructura de Oraciones", "Estrategias de Lectura", "Herramientas" y "Tutor de IA". Esta arquitectura se eligió sobre una estructura de documento lineal para fomentar el aprendizaje activo y no lineal. Permite al usuario saltar directamente a la sección que más le interese, lo cual es más amigable y menos intimidante para alguien que retoma los estudios, ya que convierte el aprendizaje en una exploración guiada en lugar de una lectura pasiva. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Clasificación de palabras (sustantivos, verbos, etc.). -> Goal: Informar y practicar. -> Viz/Method: Tarjetas interactivas con definiciones y un juego de "clic para identificar". -> Interaction: El usuario hace clic en botones para ver la teoría y luego en palabras dentro de una oración para recibir feedback instantáneo (color verde/rojo). -> Justification: El recuerdo activo y la gamificación simple son más efectivos para la retención que la lectura pasiva. -> Library/Method: Vanilla JS para la lógica del juego.
+        - Report Info: Estructuras de oraciones simples. -> Goal: Organizar y clarificar. -> Viz/Method: Listas estructuradas con código de colores para cada componente (Sujeto, Verbo, Objeto). -> Interaction: Estático pero visualmente segmentado. -> Justification: La diferenciación visual ayuda a comprender patrones gramaticales complejos de forma intuitiva. -> Library/Method: HTML/Tailwind CSS.
+        - Report Info: Frecuencia de tipos de palabras. -> Goal: Comparar y visualizar. -> Viz/Method: Gráfico de barras. -> Interaction: El gráfico se actualiza dinámicamente al analizar una nueva oración en el juego. -> Justification: Añade un elemento visual cuantitativo a un tema mayormente cualitativo, reforzando qué tipos de palabras son más comunes. -> Library/Method: Chart.js.
+        - Report Info: Técnicas de lectura. -> Goal: Informar. -> Viz/Method: Un componente de acordeón. -> Interaction: El usuario hace clic para expandir y leer los detalles de cada técnica. -> Justification: Mantiene la interfaz limpia y organizada, permitiendo al usuario enfocarse en una técnica a la vez. -> Library/Method: Vanilla JS.
+        - Report Info: Preguntas del usuario sobre los temas de la unidad. -> Goal: Respuestas dinámicas y personalizadas. -> Viz/Method: Un chatbot simple. -> Interaction: El usuario ingresa texto y el "Tutor de IA" responde. -> Justification: Proporciona un apoyo educativo interactivo que va más allá de la información estática, facilitando la comprensión y la práctica. -> Library/Method: Fetch API para llamar a la API de Gemini.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdfaf6;
+            color: #4a4a4a;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #c86b53;
+            border-bottom-color: #c86b53;
+        }
+        .word-game-word {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            padding: 2px 4px;
+            border-radius: 4px;
+            margin: 0 2px;
+        }
+        .word-game-word:hover {
+            background-color: #fcecdf;
+        }
+        .correct {
+            background-color: #d1fae5 !important;
+            color: #065f46;
+            font-weight: bold;
+        }
+        .incorrect {
+            background-color: #fee2e2 !important;
+            color: #991b1b;
+            text-decoration: line-through;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header & Navigation -->
+    <header class="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-[#c86b53]">
+                <a href="#hero">Inglés para UTN</a>
+            </h1>
+            <div class="hidden md:flex space-x-8">
+                <a href="#concepts" class="nav-link font-medium">Conceptos Clave</a>
+                <a href="#practice" class="nav-link font-medium">Identifica Palabras</a>
+                <a href="#structure" class="nav-link font-medium">Estructura de Oraciones</a>
+                <a href="#strategies" class="nav-link font-medium">Estrategias de Lectura</a>
+                <a href="#tools" class="nav-link font-medium">Herramientas</a>
+                <a href="#ai-tutor" class="nav-link font-medium text-blue-600">Tutor de IA</a>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden text-2xl">☰</button>
+        </nav>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white">
+            <a href="#concepts" class="block py-2 px-6 text-center nav-link">Conceptos Clave</a>
+            <a href="#practice" class="block py-2 px-6 text-center nav-link">Identifica Palabras</a>
+            <a href="#structure" class="block py-2 px-6 text-center nav-link">Estructura de Oraciones</a>
+            <a href="#strategies" class="block py-2 px-6 text-center nav-link">Estrategias de Lectura</a>
+            <a href="#tools" class="block py-2 px-6 text-center nav-link">Herramientas</a>
+            <a href="#ai-tutor" class="block py-2 px-6 text-center nav-link text-blue-600">Tutor de IA</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-12">
+
+        <!-- Hero Section -->
+        <section id="hero" class="text-center py-16">
+            <h2 class="text-4xl md:text-5xl font-bold text-[#a7523a] mb-4">Bienvenido/a a la Unidad 1</h2>
+            <p class="text-lg md:text-xl max-w-3xl mx-auto text-gray-600">
+                Esta guía interactiva está diseñada para ayudarte a dominar los fundamentos del inglés de una manera simple y efectiva. ¡Perfecta para retomar el ritmo de estudio!
+            </p>
+        </section>
+
+        <!-- Concepts Section -->
+        <section id="concepts" class="py-16">
+            <h3 class="text-3xl font-bold text-center mb-10 text-[#a7523a]">1. Conceptos Clave: La Arquitectura del Lenguaje</h3>
+            <p class="text-center max-w-3xl mx-auto mb-12 text-gray-600">
+                Para empezar, es fundamental entender cómo se construye el lenguaje. Todo se basa en palabras que se agrupan para formar ideas. Aquí distinguimos dos tipos principales de palabras.
+            </p>
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100">
+                    <h4 class="text-2xl font-bold mb-3 text-[#c86b53]">Palabras Léxicas</h4>
+                    <p class="text-gray-600">
+                        Son las palabras con significado propio, el "corazón" de la oración. Nombran cosas, acciones, cualidades y maneras. Son las que buscas en un diccionario.
+                    </p>
+                    <ul class="mt-4 space-y-2 text-gray-700">
+                        <li><span class="font-bold text-[#c86b53]">Sustantivos:</span> marketing, computer, opportunity</li>
+                        <li><span class="font-bold text-[#c86b53]">Verbos:</span> develop, create, engage</li>
+                        <li><span class="font-bold text-[#c86b53]">Adjetivos:</span> digital, useful, responsive</li>
+                        <li><span class="font-bold text-[#c86b53]">Adverbios:</span> strategically, quickly, efficiently</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100">
+                    <h4 class="text-2xl font-bold mb-3 text-[#7d8f9b]">Palabras Gramaticales</h4>
+                    <p class="text-gray-600">
+                        Estas palabras no tienen un significado por sí solas, pero son el "pegamento" que une a las palabras léxicas. Aportan la estructura y el sentido gramatical.
+                    </p>
+                     <ul class="mt-4 space-y-2 text-gray-700">
+                        <li><span class="font-bold text-[#7d8f9b]">Artículos:</span> the, a, an</li>
+                        <li><span class="font-bold text-[#7d8f9b]">Preposiciones:</span> in, on, at, with, for</li>
+                        <li><span class="font-bold text-[#7d8f9b]">Pronombres:</span> he, she, it, they</li>
+                        <li><span class="font-bold text-[#7d8f9b]">Conjunciones:</span> and, but, or</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Practice Section -->
+        <section id="practice" class="py-16 bg-[#fffefb] rounded-2xl">
+            <h3 class="text-3xl font-bold text-center mb-4 text-[#a7523a]">2. ¡A Practicar! Identifica los Tipos de Palabras</h3>
+            <p class="text-center max-w-3xl mx-auto mb-12 text-gray-600">
+                La mejor forma de aprender es haciendo. Usa los botones para ver las pistas (sufijos y trucos) y luego intenta identificar el tipo de palabra en la oración de ejemplo. ¡Haz clic sobre las palabras!
+            </p>
+
+            <div class="flex justify-center flex-wrap gap-3 mb-8">
+                <button id="btn-noun" class="px-6 py-2 bg-[#e8a090] text-white font-semibold rounded-full shadow-sm hover:bg-[#c86b53] transition-colors">Sustantivos</button>
+                <button id="btn-verb" class="px-6 py-2 bg-[#a3b8c5] text-white font-semibold rounded-full shadow-sm hover:bg-[#7d8f9b] transition-colors">Verbos</button>
+                <button id="btn-adjective" class="px-6 py-2 bg-[#f2c48f] text-white font-semibold rounded-full shadow-sm hover:bg-[#d9a05b] transition-colors">Adjetivos</button>
+                <button id="btn-adverb" class="px-6 py-2 bg-[#b3b3b3] text-white font-semibold rounded-full shadow-sm hover:bg-[#8c8c8c] transition-colors">Adverbios</button>
+            </div>
+
+            <!-- Info Display Area -->
+            <div id="info-display" class="max-w-4xl mx-auto mb-8 p-6 bg-white rounded-lg shadow-inner border border-gray-100 min-h-[150px]">
+                <p class="text-gray-500 text-center">Selecciona una categoría para ver las pistas y empezar el juego.</p>
+            </div>
+
+            <!-- Game Area -->
+            <div class="max-w-4xl mx-auto p-8 bg-white rounded-xl shadow-lg text-center">
+                <h4 id="game-instruction" class="text-xl font-semibold mb-4 text-gray-700">Instrucción del Juego</h4>
+                <p id="game-sentence" class="text-2xl leading-relaxed text-gray-800"></p>
+                <p id="feedback-message" class="mt-4 h-6 text-lg font-medium"></p>
+                <button id="next-sentence" class="mt-6 px-8 py-3 bg-[#c86b53] text-white font-bold rounded-lg shadow-md hover:bg-[#a7523a] transition-transform hover:scale-105 disabled:bg-gray-300 disabled:cursor-not-allowed">Siguiente</button>
+            </div>
+            
+            <!-- Chart Area -->
+            <div class="max-w-4xl mx-auto mt-12">
+                 <h4 class="text-2xl font-bold text-center mb-4 text-[#a7523a]">Análisis de la Oración</h4>
+                 <div class="chart-container bg-white p-4 rounded-xl shadow-lg">
+                    <canvas id="wordTypeChart"></canvas>
+                 </div>
+            </div>
+        </section>
+        
+        <!-- Structure Section -->
+        <section id="structure" class="py-16">
+            <h3 class="text-3xl font-bold text-center mb-10 text-[#a7523a]">3. Estructura de Oraciones Simples</h3>
+             <p class="text-center max-w-3xl mx-auto mb-12 text-gray-600">
+                Las oraciones en inglés siguen patrones predecibles. Conocer estas 5 estructuras básicas te ayudará a entender y construir frases correctamente.
+            </p>
+            <div class="max-w-4xl mx-auto space-y-4">
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <p class="text-lg"><span class="font-bold text-blue-600">Sujeto</span> + <span class="font-bold text-red-600">Verbo</span></p>
+                    <p class="text-xl text-gray-700 mt-2">Ej: <span class="font-medium text-blue-600">Brands</span> <span class="font-medium text-red-600">innovate.</span></p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <p class="text-lg"><span class="font-bold text-blue-600">Sujeto</span> + <span class="font-bold text-red-600">Verbo</span> + <span class="font-bold text-green-600">Objeto</span></p>
+                    <p class="text-xl text-gray-700 mt-2">Ej: <span class="font-medium text-blue-600">The company</span> <span class="font-medium text-red-600">developed</span> <span class="font-medium text-green-600">a marketing strategy.</span></p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <p class="text-lg"><span class="font-bold text-blue-600">Sujeto</span> + <span class="font-bold text-red-600">Verbo</span> + <span class="font-bold text-purple-600">Adjetivo</span></p>
+                    <p class="text-xl text-gray-700 mt-2">Ej: <span class="font-medium text-blue-600">Content</span> <span class="font-medium text-red-600">remains</span> <span class="font-medium text-purple-600">relevant.</span></p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <p class="text-lg"><span class="font-bold text-blue-600">Sujeto</span> + <span class="font-bold text-red-600">Verbo</span> + <span class="font-bold text-orange-600">Adverbio</span></p>
+                    <p class="text-xl text-gray-700 mt-2">Ej: <span class="font-medium text-blue-600">Companies</span> <span class="font-medium text-red-600">advertise</span> <span class="font-medium text-orange-600">strategically.</span></p>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <p class="text-lg"><span class="font-bold text-blue-600">Sujeto</span> + <span class="font-bold text-red-600">Verbo</span> + <span class="font-bold text-teal-600">Sustantivo</span></p>
+                    <p class="text-xl text-gray-700 mt-2">Ej: <span class="font-medium text-blue-600">Marketers</span> <span class="font-medium text-red-600">conduct</span> <span class="font-medium text-teal-600">thorough market research.</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Strategies Section -->
+        <section id="strategies" class="py-16 bg-[#fffefb] rounded-2xl">
+            <h3 class="text-3xl font-bold text-center mb-10 text-[#a7523a]">4. Estrategias de Lectura Inteligente</h3>
+             <p class="text-center max-w-3xl mx-auto mb-12 text-gray-600">
+                No necesitas traducir cada palabra para entender un texto. Usa estas técnicas para leer de forma más rápida y eficiente. Haz clic en cada técnica para saber más.
+            </p>
+            <div id="accordion-container" class="max-w-4xl mx-auto space-y-3">
+                <!-- Accordion items will be injected here by JS -->
+            </div>
+        </section>
+
+        <!-- Tools Section -->
+        <section id="tools" class="py-16">
+            <h3 class="text-3xl font-bold text-center mb-10 text-[#a7523a]">5. Herramientas de Apoyo</h3>
+            <p class="text-center max-w-3xl mx-auto mb-12 text-gray-600">
+                Los diccionarios y traductores son grandes aliados si se usan correctamente. Aquí tienes algunos consejos y enlaces útiles.
+            </p>
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100">
+                    <h4 class="text-2xl font-bold mb-3 text-[#c86b53]">Uso de Diccionarios</h4>
+                    <p class="text-gray-600 mb-4">
+                        Son ideales para palabras aisladas. ¡Ojo! Una palabra puede ser sustantivo y verbo a la vez. Fíjate en el contexto de tu oración para saber qué significado buscar.
+                    </p>
+                    <h5 class="font-semibold mb-2">Recomendados:</h5>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li><a href="https://www.wordreference.com" target="_blank" class="text-blue-600 hover:underline">WordReference</a></li>
+                        <li><a href="https://dictionary.cambridge.org" target="_blank" class="text-blue-600 hover:underline">Cambridge Dictionary</a></li>
+                        <li><a href="https://www.linguee.es" target="_blank" class="text-blue-600 hover:underline">Linguee (para ver ejemplos)</a></li>
+                    </ul>
+                </div>
+                <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100">
+                    <h4 class="text-2xl font-bold mb-3 text-[#7d8f9b]">Uso de Traductores Online</h4>
+                    <p class="text-gray-600 mb-4">
+                        Son muy útiles, pero no confíes ciegamente en ellos para textos largos. La mejor estrategia es: lee una parte, intenta entenderla, usa el traductor y compara tu interpretación con la traducción.
+                    </p>
+                    <h5 class="font-semibold mb-2">Recomendados:</h5>
+                    <ul class="list-disc list-inside text-gray-700 space-y-1">
+                        <li><a href="https://www.deepl.com/translator" target="_blank" class="text-blue-600 hover:underline">DeepL</a></li>
+                        <li><a href="https://translate.google.com" target="_blank" class="text-blue-600 hover:underline">Google Translate</a></li>
+                        <li><a href="https://tradukka.com/translate" target="_blank" class="text-blue-600 hover:underline">Tradukka</a></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <!-- AI Tutor Section -->
+        <section id="ai-tutor" class="py-16 bg-[#fffefb] rounded-2xl">
+            <h3 class="text-3xl font-bold text-center mb-4 text-[#a7523a]">6. Tutor de IA ✨</h3>
+            <p class="text-center max-w-3xl mx-auto mb-8 text-gray-600">
+                ¡Aquí tienes un asistente virtual para ayudarte a estudiar! Puedes hacerle preguntas sobre la Unidad 1, pedirle explicaciones o más ejemplos.
+            </p>
+            <div class="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow-lg border border-gray-100">
+                <div id="chat-history" class="h-64 overflow-y-auto mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50 flex flex-col-reverse">
+                    <div id="initial-message" class="text-center text-gray-500">
+                        ¡Hola! Estoy listo para ayudarte con la Unidad 1. ¿Qué te gustaría saber?
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <textarea id="user-input" class="flex-1 p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#c86b53] min-h-[44px]" placeholder="Escribe tu pregunta aquí..."></textarea>
+                    <button id="ask-button" class="px-6 py-3 bg-[#c86b53] text-white font-bold rounded-lg shadow-md hover:bg-[#a7523a] transition-transform hover:scale-105 disabled:bg-gray-300">
+                        Preguntar ✨
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t mt-12">
+        <div class="container mx-auto px-6 py-8 text-center text-gray-500">
+            <p>Guía interactiva creada para la Tecnicatura en Comercio Electrónico y Marketing Digital - UTN.</p>
+            <p class="text-sm mt-2">Contenido adaptado de los materiales de la Unidad 1.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Mobile Menu ---
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // --- Navigation Highlighting ---
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            window.onscroll = () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 100) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+            
+            // --- Word Identification Game Data & Logic ---
+            const infoDisplay = document.getElementById('info-display');
+            const gameInstruction = document.getElementById('game-instruction');
+            const gameSentenceEl = document.getElementById('game-sentence');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const nextSentenceBtn = document.getElementById('next-sentence');
+
+            const gameData = {
+                noun: {
+                    instruction: 'Haz clic en los SUSTANTIVOS',
+                    info: `
+                        <h4 class="text-xl font-bold mb-2 text-[#c86b53]">Sustantivos (Nouns)</h4>
+                        <p class="mb-3">Nombran personas, lugares, cosas, ideas o conceptos.</p>
+                        <p><span class="font-semibold">Pistas (sufijos comunes):</span> -tion, -sion, -ment, -ness, -ity, -er, -or, -ist, -ism, -ance, -ence.</p>
+                        <p><span class="font-semibold">Truco:</span> A menudo van después de artículos (the, a) o adjetivos (digital, new).</p>
+                    `,
+                    sentences: [
+                        { text: "Digital marketing and e-commerce have revolutionized business.", correct: ["marketing", "e-commerce", "business"] },
+                        { text: "The widespread adoption of the internet created new opportunities.", correct: ["adoption", "internet", "opportunities"] },
+                        { text: "Their target audience showed great interest.", correct: ["audience", "interest"] }
+                    ]
+                },
+                verb: {
+                    instruction: 'Haz clic en los VERBOS',
+                    info: `
+                        <h4 class="text-xl font-bold mb-2 text-[#a3b8c5]">Verbos (Verbs)</h4>
+                        <p class="mb-3">Expresan acciones o estados del ser.</p>
+                        <p><span class="font-semibold">Pistas (sufijos comunes):</span> -ate, -en, -ify, -ise/-ize.</p>
+                        <p><span class="font-semibold">Truco:</span> Son el núcleo del predicado. Cambian con el tiempo verbal (ej: develop, developed, developing).</p>
+                    `,
+                    sentences: [
+                        { text: "The company developed a new marketing strategy.", correct: ["developed"] },
+                        { text: "Brands innovate to engage with their customers.", correct: ["innovate", "engage"] },
+                        { text: "We should analyze the results carefully.", correct: ["analyze"] }
+                    ]
+                },
+                adjective: {
+                    instruction: 'Haz clic en los ADJETIVOS',
+                    info: `
+                        <h4 class="text-xl font-bold mb-2 text-[#f2c48f]">Adjetivos (Adjectives)</h4>
+                        <p class="mb-3">Describen o califican a los sustantivos. Responden a la pregunta "¿cómo es?".</p>
+                        <p><span class="font-semibold">Pistas (sufijos comunes):</span> -able, -ible, -al, -ial, -ful, -less, -ic, -ive, -ous, -y.</p>
+                        <p><span class="font-semibold">Truco:</span> Suelen ir antes de un sustantivo (a <span class="italic">digital</span> world) o después del verbo 'to be' (the world <span class="italic">is</span> digital).</p>
+                    `,
+                    sentences: [
+                        { text: "Content remains relevant and useful for the audience.", correct: ["relevant", "useful"] },
+                        { text: "Responsive design is essential for modern websites.", correct: ["Responsive", "essential", "modern"] },
+                        { text: "They launched a creative and successful campaign.", correct: ["creative", "successful"] }
+                    ]
+                },
+                adverb: {
+                    instruction: 'Haz clic en los ADVERBIOS',
+                    info: `
+                        <h4 class="text-xl font-bold mb-2 text-[#b3b3b3]">Adverbios (Adverbs)</h4>
+                        <p class="mb-3">Modifican a verbos, adjetivos u otros adverbios. Responden a "¿cómo?", "¿cuándo?", "¿dónde?".</p>
+                        <p><span class="font-semibold">Pistas (sufijos comunes):</span> La mayoría termina en -ly (equivale a "-mente" en español).</p>
+                        <p><span class="font-semibold">Truco:</span> Palabras como 'fast', 'hard', 'late' pueden ser adjetivos o adverbios según el contexto.</p>
+                    `,
+                    sentences: [
+                        { text: "Companies advertise strategically online.", correct: ["strategically", "online"] },
+                        { text: "The system works automatically and very efficiently.", correct: ["automatically", "very", "efficiently"] },
+                        { text: "They quickly adapted to the new market.", correct: ["quickly"] }
+                    ]
+                }
+            };
+
+            let currentCategory = '';
+            let sentenceIndex = 0;
+            let correctWords = [];
+            let foundWords = [];
+
+            function setupGame(category) {
+                currentCategory = category;
+                sentenceIndex = 0;
+                infoDisplay.innerHTML = gameData[category].info;
+                loadSentence();
+            }
+
+            function loadSentence() {
+                const sentenceData = gameData[currentCategory].sentences[sentenceIndex];
+                gameInstruction.textContent = gameData[currentCategory].instruction;
+                
+                const words = sentenceData.text.split(' ');
+                gameSentenceEl.innerHTML = '';
+                words.forEach(word => {
+                    const span = document.createElement('span');
+                    span.textContent = word;
+                    span.className = 'word-game-word';
+                    span.addEventListener('click', checkWord);
+                    gameSentenceEl.appendChild(span);
+                    gameSentenceEl.append(' ');
+                });
+
+                correctWords = sentenceData.correct.map(w => w.toLowerCase().replace(/[.,]/g, ''));
+                foundWords = [];
+                feedbackMessage.textContent = '';
+                feedbackMessage.className = 'mt-4 h-6 text-lg font-medium';
+                nextSentenceBtn.disabled = true;
+                updateChart(sentenceData.text);
+            }
+
+            function checkWord(event) {
+                const clickedWordEl = event.target;
+                const clickedWord = clickedWordEl.textContent.toLowerCase().replace(/[.,]/g, '');
+
+                if (clickedWordEl.classList.contains('correct') || clickedWordEl.classList.contains('incorrect')) {
+                    return; // Already checked
+                }
+
+                if (correctWords.includes(clickedWord)) {
+                    clickedWordEl.classList.add('correct');
+                    if (!foundWords.includes(clickedWord)) {
+                        foundWords.push(clickedWord);
+                    }
+                } else {
+                    clickedWordEl.classList.add('incorrect');
+                }
+
+                if (foundWords.length === correctWords.length) {
+                    feedbackMessage.textContent = '¡Excelente! ¡Encontraste todo!';
+                    feedbackMessage.classList.add('text-green-600');
+                    nextSentenceBtn.disabled = false;
+                }
+            }
+            
+            nextSentenceBtn.addEventListener('click', () => {
+                sentenceIndex++;
+                if (sentenceIndex >= gameData[currentCategory].sentences.length) {
+                    sentenceIndex = 0; // Loop back
+                }
+                loadSentence();
+            });
+
+            document.getElementById('btn-noun').addEventListener('click', () => setupGame('noun'));
+            document.getElementById('btn-verb').addEventListener('click', () => setupGame('verb'));
+            document.getElementById('btn-adjective').addEventListener('click', () => setupGame('adjective'));
+            document.getElementById('btn-adverb').addEventListener('click', () => setupGame('adverb'));
+            
+            // --- Chart.js Logic ---
+            const ctx = document.getElementById('wordTypeChart').getContext('2d');
+            let wordChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Sustantivos', 'Verbos', 'Adjetivos', 'Adverbios'],
+                    datasets: [{
+                        label: 'Cantidad de Palabras por Tipo',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: [
+                            'rgba(232, 160, 144, 0.6)',
+                            'rgba(163, 184, 197, 0.6)',
+                            'rgba(242, 196, 143, 0.6)',
+                            'rgba(179, 179, 179, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(232, 160, 144, 1)',
+                            'rgba(163, 184, 197, 1)',
+                            'rgba(242, 196, 143, 1)',
+                            'rgba(179, 179, 179, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            function updateChart(sentence) {
+                const words = sentence.toLowerCase().replace(/[.,]/g, '').split(' ');
+                let counts = { noun: 0, verb: 0, adjective: 0, adverb: 0 };
+                
+                words.forEach(word => {
+                    if (gameData.noun.sentences.some(s => s.correct.map(c => c.toLowerCase()).includes(word))) counts.noun++;
+                    if (gameData.verb.sentences.some(s => s.correct.map(c => c.toLowerCase()).includes(word))) counts.verb++;
+                    if (gameData.adjective.sentences.some(s => s.correct.map(c => c.toLowerCase()).includes(word))) counts.adjective++;
+                    if (gameData.adverb.sentences.some(s => s.correct.map(c => c.toLowerCase()).includes(word))) counts.adverb++;
+                });
+
+                wordChart.data.datasets[0].data = [counts.noun, counts.verb, counts.adjective, counts.adverb];
+                wordChart.update();
+            }
+
+            // --- Accordion for Strategies ---
+            const accordionContainer = document.getElementById('accordion-container');
+            const strategies = [
+                { title: 'Skimming (Lectura Rápida)', content: 'Consiste en leer un texto rápidamente para obtener una idea general del tema. No te detengas en los detalles. Fíjate en títulos, subtítulos, palabras en negrita y la primera y última oración de cada párrafo.' },
+                { title: 'Scanning (Búsqueda Específica)', content: 'Se usa cuando buscas información específica como una fecha, un nombre o un dato. Mueve tus ojos rápidamente por el texto buscando solo esa palabra o número clave, ignorando el resto.' },
+                { title: 'Inferencia por Contexto', content: 'Es el arte de deducir el significado de una palabra que no conoces basándote en las palabras que la rodean. Pregúntate: ¿la oración sigue teniendo sentido si quito esta palabra? ¿Qué tipo de palabra podría ir aquí?' },
+                { title: 'Identificar Cognados', content: 'Son palabras que se escriben de forma similar y significan lo mismo en inglés y en español (ej. "information" - "información", "digital" - "digital"). ¡Son tus mejores amigos! Pero cuidado con los "falsos amigos" (ej. "actually" no es "actualmente", sino "en realidad").' }
+            ];
+
+            strategies.forEach((item, index) => {
+                const accordionItem = `
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+                        <button class="accordion-button w-full text-left p-5 font-semibold text-lg flex justify-between items-center" data-index="${index}">
+                            <span>${item.title}</span>
+                            <span class="transform transition-transform duration-300">▼</span>
+                        </button>
+                        <div class="accordion-content hidden p-5 pt-0 text-gray-600">
+                            <p>${item.content}</p>
+                        </div>
+                    </div>
+                `;
+                accordionContainer.innerHTML += accordionItem;
+            });
+
+            const accordionButtons = document.querySelectorAll('.accordion-button');
+            accordionButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const content = button.nextElementSibling;
+                    const arrow = button.querySelector('span:last-child');
+                    
+                    // Close other accordions
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        if (c !== content) {
+                            c.classList.add('hidden');
+                            c.previousElementSibling.querySelector('span:last-child').classList.remove('rotate-180');
+                        }
+                    });
+
+                    content.classList.toggle('hidden');
+                    arrow.classList.toggle('rotate-180');
+                });
+            });
+
+            // --- AI Tutor Logic ---
+            const userInput = document.getElementById('user-input');
+            const askButton = document.getElementById('ask-button');
+            const chatHistory = document.getElementById('chat-history');
+
+            const systemPrompt = `Eres un tutor de inglés amigable y servicial, especializado en la Unidad 1 del curso de 'Tecnicatura en Comercio Electrónico y Marketing Digital' de la UTN. Tu objetivo es ayudar a los estudiantes a comprender los conceptos clave de esta unidad de forma simple y efectiva.
+
+El contenido de la Unidad 1 incluye:
+- Palabras léxicas (sustantivos, verbos, adjetivos, adverbios) y gramaticales.
+- Cómo identificar el tipo de palabra (usando sufijos, prefijos, contexto).
+- Estructuras básicas de oraciones simples (S+V, S+V+O, etc.).
+- Estrategias de lectura (Skimming, Scanning, Inferencia, Cognados).
+- Uso de diccionarios y traductores.
+
+Responde a las preguntas de los usuarios de manera concisa y clara, usando un tono de apoyo. Si la pregunta del usuario no está relacionada con el contenido de la Unidad 1, por favor, recuérdales amablemente el enfoque de esta conversación. No inventes información fuera del alcance de la unidad.`;
+            
+            let chatHistoryArray = [{ role: "user", parts: [{ text: systemPrompt }] }];
+
+            askButton.addEventListener('click', async () => {
+                const userText = userInput.value.trim();
+                if (userText === '') return;
+
+                // Display user message
+                const userMessageEl = document.createElement('div');
+                userMessageEl.className = 'self-end bg-blue-100 text-blue-800 p-3 rounded-lg max-w-[80%] my-2';
+                userMessageEl.textContent = userText;
+                chatHistory.prepend(userMessageEl);
+
+                userInput.value = '';
+                askButton.disabled = true;
+                const loadingMessage = document.createElement('div');
+                loadingMessage.id = 'loading-message';
+                loadingMessage.className = 'self-start bg-gray-100 text-gray-500 p-3 rounded-lg max-w-[80%] my-2 animate-pulse';
+                loadingMessage.textContent = 'El tutor está pensando...';
+                chatHistory.prepend(loadingMessage);
+
+                chatHistoryArray.push({ role: "user", parts: [{ text: userText }] });
+
+                try {
+                    const payload = {
+                        contents: chatHistoryArray,
+                    };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                    let response;
+                    let retries = 0;
+                    const maxRetries = 5;
+                    const baseDelay = 1000;
+
+                    while (retries < maxRetries) {
+                        try {
+                            response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            if (response.status !== 429) {
+                                break;
+                            }
+                            const delay = baseDelay * Math.pow(2, retries);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            retries++;
+                        } catch (error) {
+                            const delay = baseDelay * Math.pow(2, retries);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            retries++;
+                        }
+                    }
+
+                    if (!response || response.status === 429) {
+                        throw new Error('API request failed after multiple retries.');
+                    }
+                    
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        const aiMessageEl = document.createElement('div');
+                        aiMessageEl.className = 'self-start bg-gray-100 text-gray-800 p-3 rounded-lg max-w-[80%] my-2';
+                        aiMessageEl.textContent = text;
+                        document.getElementById('loading-message')?.remove();
+                        chatHistory.prepend(aiMessageEl);
+                        chatHistoryArray.push({ role: "model", parts: [{ text: text }] });
+                    } else {
+                        throw new Error('Invalid API response');
+                    }
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    const errorEl = document.createElement('div');
+                    errorEl.className = 'self-start bg-red-100 text-red-800 p-3 rounded-lg max-w-[80%] my-2';
+                    errorEl.textContent = 'Hubo un error al conectar con el tutor. Por favor, intenta de nuevo.';
+                    document.getElementById('loading-message')?.remove();
+                    chatHistory.prepend(errorEl);
+                } finally {
+                    askButton.disabled = false;
+                }
+            });
+            
+        });
+    </script>
+</body>
+</html>
